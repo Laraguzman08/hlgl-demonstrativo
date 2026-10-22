@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HLGL | Ferrorama Inteligente</title>
+  <meta name="description" content="Ferrorama Inteligente: um software que organiza dados ferroviários e busca facilitar o acesso a essas informações.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #101b2d;
+      --blue: #234c84;
+      --blue-light: #6594d5;
+      --pink: #ffefef;
+      --white: #ffffff;
+      --off-white: #f4f6f9;
+      --muted-light: #c4cad5;
+      --muted: #8d8080;
+      --label: #555a62;
+      --border: #dfdfdf;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: "Lexend Deca", system-ui, sans-serif;
+      line-height: normal;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img { display: block; max-width: 100%; }
+
+    .container {
+      max-width: 402px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+    }
+
+    .eyebrow {
+      font-size: 15px;
+      font-weight: 400;
+      text-transform: uppercase;
+    }
+
+    .photo {
+      width: 100%;
+      border-radius: var(--radius);
+      object-fit: cover;
+    }
+
+    /* Hero */
+    .hero { padding: 16px 0 40px; }
+    .hero .logo { width: 87px; height: 29px; object-fit: cover; }
+    .hero .divider { margin: 20px 0 25px; }
+    .hero .eyebrow { color: var(--off-white); }
+    .hero h1 {
+      margin-top: 12px;
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .hero .lead {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted-light);
+    }
+    .hero .photo { margin-top: 18px; aspect-ratio: 370 / 208; }
+
+    .actions { margin-top: 20px; display: grid; gap: 11px; }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 49px;
+      border-radius: var(--radius);
+      font-size: 16px;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--blue); color: var(--white); font-weight: 700; }
+    .btn-outline {
+      background: var(--navy);
+      color: var(--off-white);
+      font-weight: 500;
+      border: 1px solid var(--off-white);
+    }
+
+    /* Light sections */
+    .section-light { color: #000; }
+    .section-pink { background: var(--pink); }
+    .section-white { background: var(--white); }
+    .section-light .eyebrow { color: var(--label); }
+    .section-white .eyebrow { color: #000; }
+    .section-light .text {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--muted);
+    }
+
+    .challenge { padding: 17px 0 32px; }
+    .challenge h2 {
+      margin-top: 10px;
+      font-size: 20px;
+      font-weight: 400;
+    }
+    .challenge .text { margin-top: 14px; }
+
+    .how { padding: 17px 0 29px; }
+    .steps { margin-top: 17px; display: grid; gap: 11px; list-style: none; }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 23px;
+      height: 82px;
+      padding: 0 12px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .step-num { font-size: 20px; color: var(--blue); }
+    .step-title { font-size: 16px; }
+    .step-sub { margin-top: 1px; font-size: 15px; font-weight: 300; color: var(--muted); }
+
+    .prototype { padding: 20px 0 120px; }
+    .prototype .text { margin-top: 15px; }
+    .prototype .gallery { margin-top: 15px; display: grid; gap: 10px; }
+    .prototype .gallery .photo:first-child { aspect-ratio: 371 / 209; }
+    .prototype .gallery .photo:last-child { aspect-ratio: 371 / 202; }
+
+    /* Team */
+    .team { padding-top: 120px; }
+    .team .eyebrow { color: var(--off-white); }
+    .team h2 { margin-top: 17px; font-size: 20px; font-weight: 700; }
+    .team .text { margin-top: 17px; font-size: 14px; font-weight: 300; }
+    .team .divider { margin-top: 21px; }
+    .members { list-style: none; padding: 20px 0 20px; display: grid; gap: 16px; }
+    .member { display: flex; align-items: center; gap: 9px; }
+    .member img { width: 55px; height: 53px; border-radius: var(--radius); object-fit: cover; }
+    .member-name { font-size: 14px; font-weight: 700; }
+    .member-role { margin-top: 3px; font-size: 12px; color: var(--blue-light); }
+
+    /* Footer */
+    footer { padding: 20px 0 32px; }
+    footer .logos { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    footer .logo-hlgl { width: 74px; height: 25px; object-fit: cover; }
+    footer .logo-sesi { width: 103px; height: 24px; object-fit: cover; margin-top: -5px; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <img class="logo" src="assets/logo-hlgl.png" alt="HLGL" width="87" height="29">
+      <img class="divider" src="assets/line.svg" alt="" width="368" height="1">
+      <p class="eyebrow">Ferrorama Inteligente</p>
+      <h1>Mapeamento ferroviário inteligente.</h1>
+      <p class="lead">Um software que organiza dados ferroviários e busca facilitar o acesso a essas informações.</p>
+      <img class="photo" src="assets/trem-sensor.jpg" alt="Trem do ferrorama passando pelo sensor" width="370" height="208">
+      <div class="actions">
+        <a class="btn btn-primary" href="#">Conheça nosso App</a>
+        <a class="btn btn-outline" href="#desafio">Conheça o projeto ↓</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="desafio" class="section-light section-pink challenge">
+      <div class="container">
+        <p class="eyebrow">O desafio</p>
+        <h2>Como transformar dados ferroviários em informações úteis?</h2>
+        <p class="text">A falta de informações acessíveis pode dificultar o planejamento de quem precisa lidar com a passagem dos trens.</p>
+      </div>
+    </section>
+
+    <section class="section-light section-white how">
+      <div class="container">
+        <p class="eyebrow">Como funciona</p>
+        <ol class="steps">
+          <li class="step">
+            <span class="step-num">01</span>
+            <div>
+              <p class="step-title">Captação</p>
+              <p class="step-sub">Sensores</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num">02</span>
+            <div>
+              <p class="step-title">Organização</p>
+              <p class="step-sub">Banco de dados</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-num">03</span>
+            <div>
+              <p class="step-title">Visualização</p>
+              <p class="step-sub">Interface web</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section-light section-pink prototype">
+      <div class="container">
+        <p class="eyebrow">Nosso protótipo</p>
+        <p class="text">Um ferrorama adaptado para demonstrar o monitoramento ferroviário com sensores e tecnologia.</p>
+        <div class="gallery">
+          <img class="photo" src="assets/ferrorama.jpg" alt="Ferrorama com ponte e trilhos" width="371" height="209" loading="lazy">
+          <img class="photo" src="assets/inteiro.jpg" alt="Visão geral da maquete do ferrorama" width="371" height="202" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <section class="team">
+      <div class="container">
+        <p class="eyebrow">Quem está por trás</p>
+        <h2>Equipe HLGL</h2>
+        <p class="text">Conheça as pessoas por trás do desenvolvimento do Ferrorama Inteligente.</p>
+        <img class="divider" src="assets/line.svg" alt="" width="368" height="1">
+        <ul class="members">
+          <li class="member">
+            <img src="assets/avatar.png" alt="" width="55" height="53">
+            <div>
+              <p class="member-name">Gabriel da Costa Giacomelli</p>
+              <p class="member-role">Desenvolvimento e Plataforma</p>
+            </div>
+          </li>
+          <li class="member">
+            <img src="assets/avatar.png" alt="" width="55" height="53">
+            <div>
+              <p class="member-name">Lara Emilia Guzman Baratto</p>
+              <p class="member-role">Projeto e Dados</p>
+            </div>
+          </li>
+          <li class="member">
+            <img src="assets/avatar.png" alt="" width="55" height="53">
+            <div>
+              <p class="member-name">Lucas Siedschlag Corrêa</p>
+              <p class="member-role">Hardware e Integração</p>
+            </div>
+          </li>
+        </ul>
+        <img class="divider" src="assets/line.svg" alt="" width="368" height="1">
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container logos">
+      <img class="logo-hlgl" src="assets/logo-hlgl.png" alt="HLGL" width="74" height="25">
+      <img class="logo-sesi" src="assets/sesi-senai.png" alt="SESI SENAI" width="103" height="24">
+    </div>
+  </footer>
+</body>
+</html>
