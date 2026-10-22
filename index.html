@@ -166,6 +166,74 @@
     footer .logos { display: flex; flex-direction: column; align-items: center; gap: 0; }
     footer .logo-hlgl { width: 74px; height: 25px; object-fit: cover; }
     footer .logo-sesi { width: 103px; height: 24px; object-fit: cover; margin-top: -5px; }
+
+    /* Loader do app */
+    .loader {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      background: var(--navy);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .3s, visibility .3s;
+    }
+    .loader.is-open { opacity: 1; visibility: visible; }
+    .loader-scene { position: relative; width: 280px; height: 110px; overflow: hidden; }
+    .loader-train {
+      position: absolute;
+      left: 30px;
+      bottom: 14px;
+      width: 220px;
+      animation: train-bob .35s ease-in-out infinite alternate;
+    }
+    .loader-train .wheel { transform-box: fill-box; transform-origin: center; animation: wheel-spin .5s linear infinite; }
+    .loader-smoke span {
+      position: absolute;
+      left: 222px;
+      bottom: 66px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--muted-light);
+      opacity: 0;
+      animation: smoke 1.2s ease-out infinite;
+    }
+    .loader-smoke span:nth-child(2) { animation-delay: .4s; }
+    .loader-smoke span:nth-child(3) { animation-delay: .8s; }
+    .loader-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 4px;
+      height: 10px;
+      border-top: 2px solid var(--blue-light);
+      background: repeating-linear-gradient(90deg, var(--divider-color, #2c3f5e) 0 6px, transparent 6px 22px);
+      background-size: 22px 8px;
+      background-repeat: repeat-x;
+      animation: track-move .4s linear infinite;
+    }
+    .loader-text { font-size: 16px; font-weight: 500; color: var(--off-white); }
+    .loader-bar { width: 220px; height: 4px; border-radius: 4px; background: #1d2c44; overflow: hidden; }
+    .loader-bar span { display: block; width: 0; height: 100%; background: var(--blue-light); }
+    .loader.is-open .loader-bar span { animation: fill 2.2s ease-in-out forwards; }
+
+    @keyframes train-bob { to { transform: translateY(-2px); } }
+    @keyframes wheel-spin { to { transform: rotate(-360deg); } }
+    @keyframes track-move { to { background-position: -22px 0; } }
+    @keyframes smoke {
+      0% { opacity: .7; transform: translate(0, 0) scale(.6); }
+      100% { opacity: 0; transform: translate(30px, -40px) scale(2); }
+    }
+    @keyframes fill { to { width: 100%; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loader-train, .loader-train .wheel, .loader-smoke span, .loader-track { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -178,7 +246,7 @@
       <p class="lead">Um software que organiza dados ferroviários e busca facilitar o acesso a essas informações.</p>
       <img class="photo" src="assets/trem-sensor.jpg" alt="Trem do ferrorama passando pelo sensor" width="370" height="208">
       <div class="actions">
-        <a class="btn btn-primary" href="#">Conheça nosso App</a>
+        <a class="btn btn-primary" href="app.html" id="open-app">Conheça nosso App</a>
         <a class="btn btn-outline" href="#desafio">Conheça o projeto ↓</a>
       </div>
     </div>
@@ -293,5 +361,61 @@
       <img class="logo-sesi" src="assets/sesi-senai.png" alt="SESI SENAI" width="103" height="24">
     </div>
   </footer>
+
+  <div class="loader" id="loader" role="status" aria-live="polite" aria-hidden="true">
+    <div class="loader-scene">
+      <div class="loader-smoke"><span></span><span></span><span></span></div>
+      <svg class="loader-train" viewBox="0 0 220 72" aria-hidden="true">
+        <!-- vagões -->
+        <rect x="2" y="22" width="56" height="34" rx="5" fill="#234c84"/>
+        <rect x="10" y="29" width="16" height="12" rx="2" fill="#6594d5"/>
+        <rect x="34" y="29" width="16" height="12" rx="2" fill="#6594d5"/>
+        <rect x="62" y="22" width="56" height="34" rx="5" fill="#234c84"/>
+        <rect x="70" y="29" width="16" height="12" rx="2" fill="#6594d5"/>
+        <rect x="94" y="29" width="16" height="12" rx="2" fill="#6594d5"/>
+        <rect x="56" y="46" width="8" height="4" fill="#c4cad5"/>
+        <rect x="116" y="46" width="8" height="4" fill="#c4cad5"/>
+        <!-- locomotiva -->
+        <rect x="122" y="12" width="40" height="44" rx="5" fill="#234c84"/>
+        <rect x="130" y="19" width="24" height="16" rx="2" fill="#6594d5"/>
+        <path d="M162 28h40a10 10 0 0 1 10 10v18h-50z" fill="#2d5d9f"/>
+        <rect x="186" y="14" width="10" height="16" rx="2" fill="#234c84"/>
+        <rect x="183" y="10" width="16" height="6" rx="2" fill="#1b3c69"/>
+        <circle cx="210" cy="44" r="3" fill="#ffefef"/>
+        <rect x="118" y="8" width="48" height="6" rx="3" fill="#1b3c69"/>
+        <!-- rodas -->
+        <g fill="#f4f6f9" stroke="#101b2d" stroke-width="2">
+          <g class="wheel"><circle cx="16" cy="60" r="8"/><path d="M16 53v14M9 60h14"/></g>
+          <g class="wheel"><circle cx="44" cy="60" r="8"/><path d="M44 53v14M37 60h14"/></g>
+          <g class="wheel"><circle cx="76" cy="60" r="8"/><path d="M76 53v14M69 60h14"/></g>
+          <g class="wheel"><circle cx="104" cy="60" r="8"/><path d="M104 53v14M97 60h14"/></g>
+          <g class="wheel"><circle cx="138" cy="60" r="8"/><path d="M138 53v14M131 60h14"/></g>
+          <g class="wheel"><circle cx="172" cy="60" r="8"/><path d="M172 53v14M165 60h14"/></g>
+          <g class="wheel"><circle cx="200" cy="60" r="8"/><path d="M200 53v14M193 60h14"/></g>
+        </g>
+      </svg>
+      <div class="loader-track"></div>
+    </div>
+    <p class="loader-text">Embarcando no app…</p>
+    <div class="loader-bar"><span></span></div>
+  </div>
+
+  <script>
+    document.getElementById('open-app').addEventListener('click', function (event) {
+      event.preventDefault();
+      var loader = document.getElementById('loader');
+      var target = this.href;
+      loader.classList.add('is-open');
+      loader.setAttribute('aria-hidden', 'false');
+      setTimeout(function () { window.location.href = target; }, 2300);
+    });
+
+    // Ao voltar do app pelo botão "voltar" do navegador, esconde o loader
+    window.addEventListener('pageshow', function () {
+      var loader = document.getElementById('loader');
+      loader.classList.remove('is-open');
+      loader.setAttribute('aria-hidden', 'true');
+    });
+  </script>
 </body>
 </html>

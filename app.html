@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a4a9f">
+  <title>HLGL | Informação ferroviária de Joinville</title>
+  <meta name="description" content="Consulte o mapa ferroviário, os pontos de travessia e os horários dos trens em Joinville.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      --primary: #0a4a9f;
+      --primary-dark: #083a7e;
+      --primary-soft: #e8f0fb;
+      --surface: #f4f8fd;
+      --white: #ffffff;
+      --text: #10233f;
+      --muted: #5d6c82;
+      --border: #dde6f2;
+      --warning: #f0a020;
+      --danger: #e03b3b;
+      --radius: 12px;
+      --nav-height: 64px;
+      --app-width: 430px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      background: #dfe8f4;
+      color: var(--text);
+      font-family: "Inter", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    img { display: block; max-width: 100%; }
+
+    .ms {
+      font-family: "Material Symbols Rounded";
+      font-weight: 400;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      display: inline-block;
+      white-space: nowrap;
+      direction: ltr;
+      -webkit-font-feature-settings: "liga";
+      font-feature-settings: "liga";
+      font-variation-settings: "FILL" 0;
+      user-select: none;
+    }
+    .ms.fill { font-variation-settings: "FILL" 1; }
+
+    .app {
+      position: relative;
+      max-width: var(--app-width);
+      min-height: 100%;
+      margin: 0 auto;
+      background: var(--white);
+      box-shadow: 0 0 40px rgba(10, 74, 159, .12);
+      overflow-x: hidden;
+    }
+
+    .screen { display: none; min-height: 100dvh; flex-direction: column; }
+    .screen.is-active { display: flex; }
+    .screen.has-nav { padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom)); }
+
+    /* Barra superior */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 60px;
+      padding: 10px 16px;
+      background: var(--primary);
+      color: var(--white);
+    }
+    .topbar h1 { font-size: 17px; font-weight: 600; }
+    .topbar .icon-btn { color: var(--white); }
+    .topbar .spacer { flex: 1; }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      transition: background .15s;
+    }
+    .icon-btn:hover { background: rgba(255, 255, 255, .12); }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--white);
+      color: var(--primary);
+    }
+    .brand-mark .ms { font-size: 26px; }
+    .brand-name { font-size: 22px; font-weight: 800; letter-spacing: .5px; line-height: 1; }
+    .brand-tagline { margin-top: 2px; font-size: 10px; font-weight: 500; opacity: .9; }
+
+    /* Início */
+    .home-hero {
+      position: relative;
+      padding: 14px 16px 64px;
+      color: var(--white);
+      background:
+        linear-gradient(180deg, rgba(10, 74, 159, .55) 0%, rgba(10, 74, 159, .92) 62%, var(--primary) 100%),
+        url("assets/trem-joinville.png") center 30% / cover no-repeat;
+    }
+    .home-hero .topline { display: flex; align-items: center; justify-content: space-between; }
+    .home-hero h2 { margin-top: 64px; font-size: 27px; font-weight: 700; line-height: 1.15; }
+    .home-hero p { margin-top: 10px; font-size: 14px; line-height: 1.45; opacity: .95; }
+
+    .home-panel {
+      position: relative;
+      margin-top: -28px;
+      padding: 20px 16px 24px;
+      border-radius: 22px 22px 0 0;
+      background: var(--white);
+      flex: 1;
+    }
+
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 52px;
+      padding: 0 16px;
+      border-radius: var(--radius);
+      background: var(--primary);
+      color: var(--white);
+      font-size: 15px;
+      font-weight: 600;
+      box-shadow: 0 6px 16px rgba(10, 74, 159, .25);
+      transition: background .15s;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary span:nth-child(2) { flex: 1; text-align: center; }
+
+    .feature-grid { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .feature {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 16px 12px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      transition: background .15s, transform .15s;
+    }
+    .feature:hover { background: var(--primary-soft); transform: translateY(-1px); }
+    .feature .ms { color: var(--primary); font-size: 30px; }
+    .feature strong { margin-top: 4px; font-size: 14px; font-weight: 600; }
+    .feature small { font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+
+    .brand-footer {
+      position: relative;
+      overflow: hidden;
+      padding: 22px 16px 26px;
+      background: var(--primary);
+      color: var(--white);
+    }
+    .brand-footer svg.waves { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .35; }
+    .brand-footer .footer-text { position: relative; }
+    .brand-footer strong { display: block; font-size: 16px; font-weight: 800; }
+    .brand-footer small { font-size: 11px; opacity: .9; }
+
+    /* Busca */
+    .search-row { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--white); }
+    .search {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 44px;
+      padding: 0 12px;
+      border-radius: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font: inherit;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .search-row .icon-btn { color: var(--primary); }
+    .search-row .icon-btn:hover { background: var(--primary-soft); }
+
+    /* Mapas */
+    .map { position: relative; z-index: 1; background: #e5ecf3; }
+    #map-main { height: 42vh; min-height: 280px; }
+    #map-network { height: 50vh; min-height: 320px; }
+    .leaflet-control-zoom.leaflet-bar { border: 0; box-shadow: 0 2px 8px rgba(16, 35, 63, .18); border-radius: 10px; overflow: hidden; }
+    .leaflet-control-zoom a { width: 34px !important; height: 34px !important; line-height: 34px !important; color: var(--primary) !important; }
+    .leaflet-control-attribution { font-size: 9px; }
+    .map-locate {
+      position: absolute;
+      right: 12px;
+      bottom: 22px;
+      z-index: 500;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--white);
+      color: var(--primary);
+      box-shadow: 0 2px 8px rgba(16, 35, 63, .2);
+    }
+
+    .marker-stop {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--white);
+      border: 3px solid var(--primary);
+    }
+    .marker-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: var(--primary);
+      border: 2px solid var(--white);
+      box-shadow: 0 3px 8px rgba(16, 35, 63, .3);
+    }
+    .marker-pin .ms { transform: rotate(45deg); color: var(--white); font-size: 18px; }
+    .marker-warn .ms, .marker-alert .ms { font-size: 24px; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+    .marker-warn .ms { color: var(--warning); }
+    .marker-alert .ms { color: var(--danger); }
+
+    .leaflet-tooltip.next-tip {
+      padding: 6px 10px;
+      border: 0;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(16, 35, 63, .2);
+      font-family: inherit;
+      color: var(--text);
+    }
+    .next-tip small { display: block; font-size: 10px; color: var(--muted); }
+    .next-tip strong { font-size: 14px; color: var(--primary); }
+
+    /* Folha inferior do mapa */
+    .sheet {
+      position: relative;
+      z-index: 2;
+      margin-top: -14px;
+      padding: 18px 16px 16px;
+      border-radius: 18px 18px 0 0;
+      background: var(--white);
+      box-shadow: 0 -6px 18px rgba(16, 35, 63, .08);
+    }
+    .sheet::before {
+      content: "";
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      width: 40px;
+      height: 4px;
+      margin-left: -20px;
+      border-radius: 4px;
+      background: var(--border);
+    }
+
+    .point-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      transition: background .15s;
+    }
+    a.point-card:hover { background: var(--primary-soft); }
+    .point-icon {
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: var(--white);
+    }
+    .point-card strong { display: block; font-size: 16px; font-weight: 700; color: var(--primary); }
+    .point-card small { font-size: 12px; color: var(--muted); }
+    .point-card .grow { flex: 1; min-width: 0; }
+    .point-card .chev { color: var(--primary); }
+
+    .stats { margin-top: 10px; border-radius: var(--radius); background: var(--surface); }
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .stat-row + .stat-row { border-top: 1px solid var(--border); }
+    .stat-row b { color: var(--text); font-weight: 700; font-size: 13px; }
+    .stat-row b.big { font-size: 20px; }
+
+    /* Detalhes do ponto */
+    .content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .highlight {
+      padding: 14px;
+      border-radius: var(--radius);
+      background: var(--primary-soft);
+      text-align: center;
+    }
+    .highlight small { font-size: 12px; color: var(--muted); }
+    .highlight strong { display: block; margin-top: 4px; font-size: 32px; font-weight: 800; color: var(--primary); }
+    .detail-list { list-style: none; border-radius: var(--radius); background: var(--surface); }
+    .detail-list li { display: flex; align-items: center; gap: 12px; padding: 13px 14px; font-size: 12.5px; color: var(--muted); }
+    .detail-list li + li { border-top: 1px solid var(--border); }
+    .detail-list .ms { color: var(--primary); font-size: 22px; }
+    .detail-list span.label { flex: 1; }
+    .detail-list b { color: var(--text); font-weight: 600; }
+    .section-title { margin-top: 6px; font-size: 15px; font-weight: 700; }
+
+    .time-list { list-style: none; display: grid; gap: 8px; }
+    .time-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      transition: background .15s;
+    }
+    a.time-item:hover { background: var(--primary-soft); }
+    .time-item > .ms {
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .time-item .grow { flex: 1; min-width: 0; }
+    .time-item .grow strong { display: block; font-size: 14px; font-weight: 700; color: var(--primary); }
+    .time-item .grow small { font-size: 12px; color: var(--muted); }
+    .time-item .time { font-size: 20px; font-weight: 700; }
+    .time-item .time.small { font-size: 16px; }
+    .time-item .route { font-size: 12px; color: var(--muted); }
+
+    /* Abas segmentadas */
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin: 12px 16px;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--white);
+    }
+    .segmented button {
+      height: 36px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      transition: background .15s, color .15s;
+    }
+    .segmented button.is-active { background: var(--primary); color: var(--white); }
+
+    /* Legenda */
+    .legend { list-style: none; padding: 14px 20px 18px; display: grid; gap: 10px; font-size: 13px; }
+    .legend li { display: flex; align-items: center; gap: 12px; }
+    .legend .swatch-line { width: 22px; height: 4px; border-radius: 2px; background: var(--primary); }
+    .legend .swatch-dot { width: 12px; height: 12px; margin: 0 5px; border-radius: 50%; background: var(--primary); }
+    .legend .ms { font-size: 20px; }
+    .legend .warn { color: var(--warning); }
+    .legend .alert { color: var(--danger); }
+
+    /* Travessias */
+    .crossing-list { list-style: none; padding: 4px 16px 16px; display: grid; gap: 10px; }
+    .crossing {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      transition: background .15s;
+    }
+    .crossing:hover { background: var(--primary-soft); }
+    .crossing > .ms:first-child { color: var(--primary); font-size: 38px; }
+    .crossing .grow { flex: 1; min-width: 0; }
+    .crossing strong { display: block; font-size: 14px; font-weight: 700; color: var(--primary); }
+    .crossing small { display: block; font-size: 12px; line-height: 1.4; color: var(--muted); }
+    .tag {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .crossing .chev { color: var(--muted); }
+    .empty { padding: 24px 16px; text-align: center; font-size: 13px; color: var(--muted); }
+
+    .update-note {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 16px 16px;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .update-note .ms { color: var(--primary); }
+
+    /* Sobre */
+    .about-brand { display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); }
+    .about-brand .brand-mark { width: 60px; height: 60px; border-radius: 12px; background: var(--primary); color: var(--white); }
+    .about-brand .brand-mark .ms { font-size: 40px; }
+    .about-brand .brand-name { font-size: 32px; color: var(--primary); }
+    .about-brand .brand-tagline { font-size: 13px; color: var(--muted); opacity: 1; }
+    .about-text { font-size: 13.5px; line-height: 1.6; color: var(--text); }
+    .about-card { display: flex; gap: 14px; padding: 16px; border-radius: var(--radius); background: var(--surface); }
+    .about-card > .ms { color: var(--primary); font-size: 28px; }
+    .about-card strong { display: block; font-size: 14px; font-weight: 700; color: var(--primary); }
+    .about-card p { margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+    .team-list { list-style: none; margin-top: 8px; display: grid; gap: 10px; }
+    .team-list b { display: block; font-size: 13px; font-weight: 600; color: var(--text); }
+    .team-list span { font-size: 12px; color: var(--muted); }
+
+    /* Navegação inferior */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      z-index: 30;
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      width: min(var(--app-width), 100%);
+      height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      transform: translateX(-50%);
+      background: var(--white);
+      border-top: 1px solid var(--border);
+    }
+    .bottom-nav.is-visible { display: grid; }
+    .bottom-nav a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 11px;
+      color: #8a97ab;
+    }
+    .bottom-nav a.is-active { color: var(--primary); font-weight: 700; }
+    .bottom-nav a.is-active .ms { font-variation-settings: "FILL" 1; }
+
+    /* Menu lateral */
+    .drawer {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      visibility: hidden;
+    }
+    .drawer.is-open { visibility: visible; }
+    .drawer-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(16, 35, 63, .45);
+      opacity: 0;
+      transition: opacity .25s;
+    }
+    .drawer.is-open .drawer-backdrop { opacity: 1; }
+    .drawer-panel {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      display: flex;
+      flex-direction: column;
+      width: min(var(--app-width), 100%);
+      overflow: hidden;
+      transform: translateX(-50%) translateY(-100%);
+      background: var(--primary);
+      color: var(--white);
+      transition: transform .3s ease;
+    }
+    .drawer.is-open .drawer-panel { transform: translateX(-50%) translateY(0); }
+    .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 24px 16px 28px; }
+    .drawer-head .brand-mark { width: 46px; height: 46px; background: transparent; color: var(--white); }
+    .drawer-head .brand-mark .ms { font-size: 44px; }
+    .drawer-nav { list-style: none; padding: 0 12px; display: grid; gap: 6px; }
+    .drawer-nav a {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      transition: background .15s;
+    }
+    .drawer-nav a:hover { background: rgba(255, 255, 255, .08); }
+    .drawer-nav a.is-active { background: #1d5fb8; }
+    .drawer-nav .ms { font-size: 26px; font-variation-settings: "FILL" 1; }
+    .drawer .brand-footer { margin-top: auto; background: transparent; }
+    .drawer-back { display: block; margin: 18px 26px 0; font-size: 12px; opacity: .8; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Início -->
+    <section class="screen" data-screen="inicio">
+      <div class="home-hero">
+        <div class="topline">
+          <div class="brand">
+            <span class="brand-mark"><span class="ms fill">train</span></span>
+            <div>
+              <div class="brand-name">HLGL</div>
+              <div class="brand-tagline">Informação ferroviária de Joinville</div>
+            </div>
+          </div>
+          <button class="icon-btn" type="button" data-open-menu aria-label="Abrir menu" style="color:#fff"><span class="ms">menu</span></button>
+        </div>
+        <h2>A ferrovia da sua cidade, ao seu alcance.</h2>
+        <p>Consulte o mapa ferroviário, conheça os pontos de travessia e entenda como a ferrovia se conecta à cidade.</p>
+      </div>
+
+      <div class="home-panel">
+        <a class="btn-primary" href="#malha">
+          <span class="ms">map</span>
+          <span>Explorar mapa ferroviário</span>
+          <span class="ms">chevron_right</span>
+        </a>
+        <div class="feature-grid">
+          <a class="feature" href="#mapa">
+            <span class="ms">map</span>
+            <strong>Mapa ferroviário</strong>
+            <small>Veja o traçado e os pontos da malha.</small>
+          </a>
+          <a class="feature" href="#travessias">
+            <span class="ms fill">location_on</span>
+            <strong>Travessias</strong>
+            <small>Saiba onde a ferrovia cruza a cidade.</small>
+          </a>
+          <a class="feature" href="#horarios">
+            <span class="ms">schedule</span>
+            <strong>Horários</strong>
+            <small>Confira a previsão de passagem dos trens.</small>
+          </a>
+          <a class="feature" href="#sobre">
+            <span class="ms fill">info</span>
+            <strong>Sobre o HLGL</strong>
+            <small>Conheça o projeto e a equipe.</small>
+          </a>
+        </div>
+      </div>
+
+      <footer class="brand-footer">
+        <svg class="waves" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="#fff" stroke-width="1">
+          <path d="M0 60 C80 20 160 90 240 50 S360 30 400 55"/>
+          <path d="M0 68 C90 30 170 95 250 58 S360 40 400 64"/>
+          <path d="M0 76 C100 40 180 100 260 66 S370 50 400 72"/>
+        </svg>
+        <div class="footer-text">
+          <strong>HLGL</strong>
+          <small>Informação ferroviária ao alcance de todos.</small>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Mapa -->
+    <section class="screen has-nav" data-screen="mapa">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark"><span class="ms fill">train</span></span>
+          <div class="brand-name">HLGL</div>
+        </div>
+        <span class="spacer"></span>
+        <button class="icon-btn" type="button" data-open-menu aria-label="Abrir menu"><span class="ms">menu</span></button>
+      </header>
+      <div class="search-row">
+        <label class="search">
+          <span class="ms">search</span>
+          <input type="search" id="map-search" placeholder="Buscar ponto, endereço..." autocomplete="off">
+        </label>
+        <button class="icon-btn" type="button" aria-label="Filtros"><span class="ms">tune</span></button>
+      </div>
+      <div class="map" id="map-main">
+        <button class="map-locate" type="button" data-locate="main" aria-label="Centralizar mapa"><span class="ms">my_location</span></button>
+      </div>
+      <div class="sheet" id="map-sheet"></div>
+    </section>
+
+    <!-- Detalhes do ponto -->
+    <section class="screen has-nav" data-screen="ponto">
+      <header class="topbar">
+        <a class="icon-btn" href="#mapa" aria-label="Voltar"><span class="ms">arrow_back</span></a>
+        <h1>Detalhes do ponto</h1>
+      </header>
+      <div class="content" id="point-detail"></div>
+    </section>
+
+    <!-- Malha ferroviária -->
+    <section class="screen has-nav" data-screen="malha">
+      <header class="topbar">
+        <a class="icon-btn" href="#inicio" aria-label="Voltar"><span class="ms">arrow_back</span></a>
+        <h1>Malha ferroviária</h1>
+      </header>
+      <div class="segmented" role="tablist">
+        <button type="button" class="is-active" data-layer="map" role="tab">Mapa</button>
+        <button type="button" data-layer="satellite" role="tab">Satélite</button>
+      </div>
+      <div class="map" id="map-network">
+        <button class="map-locate" type="button" data-locate="network" aria-label="Centralizar mapa"><span class="ms">my_location</span></button>
+      </div>
+      <ul class="legend">
+        <li><span class="swatch-line"></span> Traçado ferroviário</li>
+        <li><span class="swatch-dot"></span> Ponto de parada</li>
+        <li><span class="ms fill warn">warning</span> Travessia</li>
+        <li><span class="ms fill alert">error</span> Interdição / Ocorrência</li>
+      </ul>
+    </section>
+
+    <!-- Travessias -->
+    <section class="screen has-nav" data-screen="travessias">
+      <header class="topbar">
+        <a class="icon-btn" href="#inicio" aria-label="Voltar"><span class="ms">arrow_back</span></a>
+        <h1>Travessias</h1>
+      </header>
+      <div class="search-row">
+        <label class="search">
+          <span class="ms">search</span>
+          <input type="search" id="crossing-search" placeholder="Buscar travessia..." autocomplete="off">
+        </label>
+        <button class="icon-btn" type="button" aria-label="Filtros"><span class="ms">tune</span></button>
+      </div>
+      <ul class="crossing-list" id="crossing-list"></ul>
+    </section>
+
+    <!-- Horários -->
+    <section class="screen has-nav" data-screen="horarios">
+      <header class="topbar">
+        <a class="icon-btn" href="#inicio" aria-label="Voltar"><span class="ms">arrow_back</span></a>
+        <h1>Horários</h1>
+      </header>
+      <div class="segmented" role="tablist">
+        <button type="button" class="is-active" data-times="next" role="tab">Próximas passagens</button>
+        <button type="button" data-times="all" role="tab">Todos</button>
+      </div>
+      <ul class="time-list" id="time-list" style="padding: 0 16px 12px"></ul>
+      <div class="update-note">
+        <span class="ms">schedule</span>
+        <div>Última atualização<br><b id="last-update"></b></div>
+      </div>
+    </section>
+
+    <!-- Sobre -->
+    <section class="screen has-nav" data-screen="sobre">
+      <header class="topbar">
+        <a class="icon-btn" href="#inicio" aria-label="Voltar"><span class="ms">arrow_back</span></a>
+        <h1>Sobre o HLGL</h1>
+      </header>
+      <div class="content">
+        <div class="about-brand">
+          <span class="brand-mark"><span class="ms fill">train</span></span>
+          <div>
+            <div class="brand-name">HLGL</div>
+            <div class="brand-tagline">Informação ferroviária de Joinville</div>
+          </div>
+        </div>
+        <p class="about-text">O HLGL é um projeto de mapeamento da malha ferroviária de Joinville, com o objetivo de reunir e disponibilizar informações sobre o traçado, pontos de travessia, horários e ocorrências da ferrovia.</p>
+        <div class="about-card">
+          <span class="ms">track_changes</span>
+          <div>
+            <strong>Nossa missão</strong>
+            <p>Facilitar o acesso à informação e contribuir para uma mobilidade urbana mais segura e eficiente.</p>
+          </div>
+        </div>
+        <div class="about-card">
+          <span class="ms fill">person</span>
+          <div>
+            <strong>Equipe</strong>
+            <ul class="team-list">
+              <li><b>Gabriel Giacomelli</b><span>Desenvolvimento e Plataforma</span></li>
+              <li><b>Lara Guzman</b><span>Projeto e Dados</span></li>
+              <li><b>Lucas Corrêa</b><span>Hardware e Integração</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Navegação principal">
+      <a href="#inicio" data-nav="inicio"><span class="ms">home</span>Início</a>
+      <a href="#mapa" data-nav="mapa"><span class="ms">map</span>Mapa</a>
+      <a href="#travessias" data-nav="travessias"><span class="ms">location_on</span>Travessias</a>
+      <a href="#sobre" data-nav="sobre"><span class="ms">person</span>Sobre</a>
+    </nav>
+  </div>
+
+  <!-- Menu -->
+  <div class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-menu></div>
+    <div class="drawer-panel" role="dialog" aria-label="Menu">
+      <div class="drawer-head">
+        <div class="brand">
+          <span class="brand-mark"><span class="ms fill">train</span></span>
+          <div>
+            <div class="brand-name" style="font-size:28px">HLGL</div>
+            <div class="brand-tagline" style="font-size:11px">Informação ferroviária de Joinville</div>
+          </div>
+        </div>
+        <button class="icon-btn" type="button" data-close-menu aria-label="Fechar menu" style="color:#fff"><span class="ms">close</span></button>
+      </div>
+      <ul class="drawer-nav">
+        <li><a href="#inicio" data-nav="inicio"><span class="ms">home</span>Início</a></li>
+        <li><a href="#malha" data-nav="malha"><span class="ms">map</span>Mapa ferroviário</a></li>
+        <li><a href="#travessias" data-nav="travessias"><span class="ms">location_on</span>Travessias</a></li>
+        <li><a href="#horarios" data-nav="horarios"><span class="ms">schedule</span>Horários</a></li>
+        <li><a href="#sobre" data-nav="sobre"><span class="ms">info</span>Sobre o HLGL</a></li>
+      </ul>
+      <a class="drawer-back" href="index.html">← Voltar ao site do projeto</a>
+      <footer class="brand-footer">
+        <svg class="waves" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="#fff" stroke-width="1">
+          <path d="M0 60 C80 20 160 90 240 50 S360 30 400 55"/>
+          <path d="M0 68 C90 30 170 95 250 58 S360 40 400 64"/>
+          <path d="M0 76 C100 40 180 100 260 66 S370 50 400 72"/>
+        </svg>
+        <div class="footer-text">
+          <strong>HLGL</strong>
+          <small>Informação ferroviária ao alcance de todos.</small>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Dados demonstrativos (traçado e posições ilustrativos)
+    var CENTER = [-26.300, -48.850];
+    var TRACK = [
+      [-26.2600, -48.8920], [-26.2700, -48.8790], [-26.2800, -48.8660], [-26.2900, -48.8560],
+      [-26.3047, -48.8482], [-26.3150, -48.8400], [-26.3250, -48.8300], [-26.3330, -48.8180],
+      [-26.3380, -48.8050]
+    ];
+    var POINTS = [
+      { id: 1, name: 'Ponto 1', street: 'Rua XV de Novembro', district: 'Centro', route: 'Trecho A - Centro', time: '14:20', coords: [-26.3150, -48.8400] },
+      { id: 2, name: 'Ponto 2', street: 'Rua Otto Boehm', district: 'Costa e Silva', route: 'Trecho A - Centro', time: '14:32', coords: [-26.3047, -48.8482] },
+      { id: 3, name: 'Ponto 3', street: 'Rua Dona Francisca', district: 'Santo Antônio', route: 'Trecho B - Norte', time: '14:55', coords: [-26.2800, -48.8660] },
+      { id: 4, name: 'Ponto 4', street: 'Rua Tuiuti', district: 'Aventureiro', route: 'Trecho C - Centro', time: '15:18', coords: [-26.3250, -48.8300] },
+      { id: 5, name: 'Ponto 5', street: 'Rua Anita Garibaldi', district: 'Anita Garibaldi', route: 'Trecho A - Centro', time: '16:03', coords: [-26.3380, -48.8050] }
+    ];
+    var CROSSINGS = [
+      { id: 1, name: 'Travessia 01', street: 'Rua XV de Novembro', district: 'Centro', type: 'Passagem em nível', coords: [-26.3100, -48.8440] },
+      { id: 2, name: 'Travessia 02', street: 'Rua Otto Boehm', district: 'Costa e Silva', type: 'Passagem em nível', coords: [-26.2975, -48.8521] },
+      { id: 3, name: 'Travessia 03', street: 'Rua Dona Francisca', district: 'Santo Antônio', type: 'Passagem em nível', coords: [-26.2860, -48.8600] },
+      { id: 4, name: 'Travessia 04', street: 'Rua Tuiuti', district: 'Aventureiro', type: 'Passagem em nível', coords: [-26.3290, -48.8240] }
+    ];
+    var INCIDENTS = [{ name: 'Interdição', coords: [-26.2650, -48.8855] }];
+    var FREQUENCY_MIN = 45;
+    var LAST_UPDATE = '16/10/2025 às 14:20';
+
+    function addMinutes(time, minutes) {
+      var parts = time.split(':').map(Number);
+      var total = (parts[0] * 60 + parts[1] + minutes) % (24 * 60);
+      return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+    }
+
+    function upcoming(point, count) {
+      var routes = [point.route.replace('Trecho ', ''), 'A - Norte'];
+      var list = [];
+      for (var i = 0; i < count; i++) {
+        list.push({ time: addMinutes(point.time, i * FREQUENCY_MIN), route: routes[i % 2] });
+      }
+      return list;
+    }
+
+    function findPoint(id) {
+      return POINTS.filter(function (p) { return String(p.id) === String(id); })[0] || POINTS[1];
+    }
+
+    function esc(text) {
+      return String(text).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    // Mapas
+    var TILES = {
+      map: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
+      satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' }
+    };
+    var maps = {};
+    var pointMarkers = {};
+    var selectedPointId = 2;
+
+    var icons = {
+      stop: L.divIcon({ className: '', html: '<div class="marker-stop"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }),
+      pin: L.divIcon({ className: '', html: '<div class="marker-pin"><span class="ms fill">train</span></div>', iconSize: [34, 34], iconAnchor: [17, 38], tooltipAnchor: [16, -24] }),
+      warn: L.divIcon({ className: 'marker-warn', html: '<span class="ms fill">warning</span>', iconSize: [24, 24], iconAnchor: [12, 12] }),
+      alert: L.divIcon({ className: 'marker-alert', html: '<span class="ms fill">error</span>', iconSize: [24, 24], iconAnchor: [12, 12] })
+    };
+
+    function buildMap(elementId, withPointSelection) {
+      var map = L.map(elementId, { zoomControl: false }).setView(CENTER, 13);
+      L.control.zoom({ position: 'topright' }).addTo(map);
+      map._baseLayer = L.tileLayer(TILES.map.url, { attribution: TILES.map.attribution, maxZoom: 19 }).addTo(map);
+      L.polyline(TRACK, { color: '#0a4a9f', weight: 4, opacity: .9 }).addTo(map);
+
+      CROSSINGS.forEach(function (c) {
+        L.marker(c.coords, { icon: icons.warn }).addTo(map).bindPopup('<b>' + esc(c.name) + '</b><br>' + esc(c.street));
+      });
+      INCIDENTS.forEach(function (i) {
+        L.marker(i.coords, { icon: icons.alert }).addTo(map).bindPopup('<b>' + esc(i.name) + '</b>');
+      });
+      POINTS.forEach(function (p) {
+        var marker = L.marker(p.coords, { icon: icons.stop }).addTo(map);
+        if (withPointSelection) {
+          pointMarkers[p.id] = marker;
+          marker.on('click', function () { selectPoint(p.id); });
+        } else {
+          marker.on('click', function () { location.hash = '#ponto/' + p.id; });
+        }
+      });
+      return map;
+    }
+
+    function selectPoint(id) {
+      var point = findPoint(id);
+      selectedPointId = point.id;
+      Object.keys(pointMarkers).forEach(function (key) {
+        var marker = pointMarkers[key];
+        marker.unbindTooltip();
+        marker.setIcon(icons.stop);
+      });
+      var marker = pointMarkers[point.id];
+      if (marker) {
+        marker.setIcon(icons.pin);
+        marker.bindTooltip('<small>Próxima passagem</small><strong>' + point.time + '</strong>', {
+          permanent: true, direction: 'right', className: 'next-tip'
+        }).openTooltip();
+      }
+      renderSheet(point);
+    }
+
+    function renderSheet(point) {
+      document.getElementById('map-sheet').innerHTML =
+        '<a class="point-card" href="#ponto/' + point.id + '">' +
+          '<span class="point-icon"><span class="ms fill">train</span></span>' +
+          '<span class="grow"><strong>' + esc(point.name) + '</strong><small>' + esc(point.street) + ' - ' + esc(point.district) + '</small></span>' +
+          '<span class="ms chev">chevron_right</span>' +
+        '</a>' +
+        '<div class="stats">' +
+          '<div class="stat-row">Próxima passagem <b class="big">' + point.time + '</b></div>' +
+          '<div class="stat-row">Trecho ferroviário <b>' + esc(point.route.replace('Trecho ', '')) + '</b></div>' +
+          '<div class="stat-row">Frequência <b>A cada ' + FREQUENCY_MIN + ' min</b></div>' +
+        '</div>';
+    }
+
+    function ensureMap(name) {
+      if (name === 'mapa' && !maps.main) {
+        maps.main = buildMap('map-main', true);
+        selectPoint(selectedPointId);
+      }
+      if (name === 'malha' && !maps.network) {
+        maps.network = buildMap('map-network', false);
+      }
+      // O mapa foi criado/escondido com display:none; recalcula o tamanho ao aparecer
+      setTimeout(function () {
+        if (name === 'mapa' && maps.main) maps.main.invalidateSize();
+        if (name === 'malha' && maps.network) maps.network.invalidateSize();
+      }, 0);
+    }
+
+    document.querySelectorAll('[data-locate]').forEach(function (button) {
+      button.addEventListener('click', function (event) {
+        event.stopPropagation();
+        var map = button.dataset.locate === 'main' ? maps.main : maps.network;
+        if (map) map.flyTo(CENTER, 13);
+      });
+    });
+
+    document.querySelectorAll('[data-layer]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        document.querySelectorAll('[data-layer]').forEach(function (b) { b.classList.toggle('is-active', b === button); });
+        var map = maps.network;
+        if (!map) return;
+        var tiles = TILES[button.dataset.layer];
+        map.removeLayer(map._baseLayer);
+        map._baseLayer = L.tileLayer(tiles.url, { attribution: tiles.attribution, maxZoom: 19 }).addTo(map);
+        map._baseLayer.bringToBack();
+      });
+    });
+
+    document.getElementById('map-search').addEventListener('input', function () {
+      var term = this.value.trim().toLowerCase();
+      if (!term) return;
+      var match = POINTS.filter(function (p) {
+        return (p.name + ' ' + p.street + ' ' + p.district).toLowerCase().indexOf(term) !== -1;
+      })[0];
+      if (match) {
+        selectPoint(match.id);
+        maps.main.flyTo(match.coords, 14);
+      }
+    });
+
+    // Detalhes do ponto
+    function renderPoint(id) {
+      var point = findPoint(id);
+      var times = upcoming(point, 3).map(function (t) {
+        return '<li class="time-item"><span class="ms fill">train</span>' +
+          '<span class="time small grow">' + t.time + '</span><span class="route">' + esc(t.route) + '</span></li>';
+      }).join('');
+      document.getElementById('point-detail').innerHTML =
+        '<div class="point-card">' +
+          '<span class="point-icon"><span class="ms fill">train</span></span>' +
+          '<span class="grow"><strong>' + esc(point.name) + '</strong><small>' + esc(point.street) + ' - ' + esc(point.district) + '</small></span>' +
+        '</div>' +
+        '<div class="highlight"><small>Próxima passagem</small><strong>' + point.time + '</strong></div>' +
+        '<ul class="detail-list">' +
+          '<li><span class="ms fill">train</span><span class="label">Trecho ferroviário</span><b>' + esc(point.route.replace('Trecho ', '')) + '</b></li>' +
+          '<li><span class="ms">schedule</span><span class="label">Frequência</span><b>A cada ' + FREQUENCY_MIN + ' min</b></li>' +
+          '<li><span class="ms fill">location_on</span><span class="label">Tipo de travessia</span><b>Passagem em nível</b></li>' +
+          '<li><span class="ms fill">pin_drop</span><span class="label">Coordenadas</span><b>' + point.coords[0].toFixed(4) + ', ' + point.coords[1].toFixed(4) + '</b></li>' +
+        '</ul>' +
+        '<h2 class="section-title">Horários próximos</h2>' +
+        '<ul class="time-list">' + times + '</ul>';
+    }
+
+    // Travessias
+    function renderCrossings(term) {
+      term = (term || '').trim().toLowerCase();
+      var items = CROSSINGS.filter(function (c) {
+        return (c.name + ' ' + c.street + ' ' + c.district).toLowerCase().indexOf(term) !== -1;
+      });
+      var list = document.getElementById('crossing-list');
+      if (!items.length) {
+        list.innerHTML = '<li class="empty">Nenhuma travessia encontrada.</li>';
+        return;
+      }
+      list.innerHTML = items.map(function (c) {
+        return '<li><a class="crossing" href="#malha/' + c.id + '">' +
+          '<span class="ms fill">location_on</span>' +
+          '<span class="grow"><strong>' + esc(c.name) + '</strong><small>' + esc(c.street) + '</small><small>' + esc(c.district) + '</small>' +
+          '<span class="tag">' + esc(c.type) + '</span></span>' +
+          '<span class="ms chev">chevron_right</span></a></li>';
+      }).join('');
+    }
+    document.getElementById('crossing-search').addEventListener('input', function () { renderCrossings(this.value); });
+
+    // Horários
+    var timesMode = 'next';
+    function renderTimes() {
+      var items = [];
+      POINTS.forEach(function (p) {
+        var times = timesMode === 'next' ? [{ time: p.time, route: p.route }] : upcoming(p, 3).map(function (t) {
+          return { time: t.time, route: 'Trecho ' + t.route };
+        });
+        times.forEach(function (t) { items.push({ point: p, time: t.time, route: t.route }); });
+      });
+      items.sort(function (a, b) { return a.time.localeCompare(b.time); });
+      document.getElementById('time-list').innerHTML = items.map(function (item) {
+        return '<li><a class="time-item" href="#ponto/' + item.point.id + '">' +
+          '<span class="ms fill">train</span>' +
+          '<span class="grow"><strong>' + esc(item.point.name) + '</strong><small>' + esc(item.route) + '</small></span>' +
+          '<span class="time">' + item.time + '</span></a></li>';
+      }).join('');
+      document.getElementById('last-update').textContent = LAST_UPDATE;
+    }
+    document.querySelectorAll('[data-times]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        timesMode = button.dataset.times;
+        document.querySelectorAll('[data-times]').forEach(function (b) { b.classList.toggle('is-active', b === button); });
+        renderTimes();
+      });
+    });
+
+    // Menu
+    var drawer = document.getElementById('drawer');
+    function setMenu(open) {
+      drawer.classList.toggle('is-open', open);
+      drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+    document.querySelectorAll('[data-open-menu]').forEach(function (b) { b.addEventListener('click', function () { setMenu(true); }); });
+    document.querySelectorAll('[data-close-menu]').forEach(function (b) { b.addEventListener('click', function () { setMenu(false); }); });
+    drawer.querySelectorAll('.drawer-nav a').forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape') setMenu(false); });
+
+    // Navegação por hash
+    var NAV_PARENT = { inicio: 'inicio', mapa: 'mapa', ponto: 'mapa', malha: 'mapa', travessias: 'travessias', horarios: 'horarios', sobre: 'sobre' };
+
+    function route() {
+      var parts = location.hash.replace('#', '').split('/');
+      var name = NAV_PARENT[parts[0]] ? parts[0] : 'inicio';
+      var param = parts[1];
+
+      document.querySelectorAll('.screen').forEach(function (s) {
+        s.classList.toggle('is-active', s.dataset.screen === name);
+      });
+      document.getElementById('bottom-nav').classList.toggle('is-visible', name !== 'inicio');
+      document.querySelectorAll('#bottom-nav [data-nav]').forEach(function (a) {
+        a.classList.toggle('is-active', a.dataset.nav === NAV_PARENT[name]);
+      });
+      document.querySelectorAll('.drawer-nav [data-nav]').forEach(function (a) {
+        a.classList.toggle('is-active', a.dataset.nav === name || (name === 'mapa' && a.dataset.nav === 'malha'));
+      });
+
+      if (name === 'ponto') renderPoint(param);
+      if (name === 'travessias') renderCrossings(document.getElementById('crossing-search').value);
+      if (name === 'horarios') renderTimes();
+      if (name === 'mapa' || name === 'malha') ensureMap(name);
+      if (name === 'malha' && param) {
+        var crossing = CROSSINGS.filter(function (c) { return String(c.id) === param; })[0];
+        if (crossing) setTimeout(function () { maps.network.setView(crossing.coords, 16); }, 50);
+      }
+      window.scrollTo(0, 0);
+    }
+
+    window.addEventListener('hashchange', route);
+    route();
+  </script>
+</body>
+</html>
